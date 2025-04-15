@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    container_name: ${APP_NAME}-pg
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      POSTGRES_USER: ${DB_ADMIN_LOGIN}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+    ports:
+      - 5433:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_ADMIN_LOGIN} -d ${DB_DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: ${APP_NAME}-nest
+    env_file:
+      - .env.docker
+    restart: always
+    build: .
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - network
+    environment:
+      DB_HOST: db
+
+volumes:
+  pgdata:
+
+networks:
+  network:
+    driver: bridge
